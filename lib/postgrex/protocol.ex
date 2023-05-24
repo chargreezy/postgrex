@@ -1723,6 +1723,7 @@ defmodule Postgrex.Protocol do
 
     with :ok <- msg_send(s, msgs, buffer),
          {:error, err, %{buffer: buffer} = s} <- error_ready(s, status, err, buffer),
+         {:error, err, %{buffer: buffer} = s} <- error_ready(s, status, err, buffer),
          {:ok, _, s} <- recv_transaction(s, status, buffer) do
       {:error, err, s}
     else
