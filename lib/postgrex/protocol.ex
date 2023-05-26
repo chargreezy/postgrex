@@ -1717,14 +1717,22 @@ defmodule Postgrex.Protocol do
     end
   end
 
+  defp recv_until_transaction(s, status, buffer) do
+    case recv_transaction(s, status, buffer) do
+      {:ok, _, %{postgres: :transaction}} = ok ->
+        ok
+      {:ok, _, %{buffer: buffer} = s} ->
+        recv_until_transaction(s, status, buffer)
+    end
+  end
+
   defp rollback_flushed(s, %{mode: :savepoint} = status, err, buffer) do
     stmt = "ROLLBACK TO SAVEPOINT postgrex_query;RELEASE SAVEPOINT postgrex_query"
     msgs = [msg_sync(), msg_query(statement: stmt)]
 
     with :ok <- msg_send(s, msgs, buffer),
-         {:error, err, %{buffer: buffer} = s} <- error_ready(s, status, err, buffer),
-         {:error, err, %{buffer: buffer} = s} <- error_ready(s, status, err, buffer),
-         {:ok, _, s} <- recv_transaction(s, status, buffer) do
+         {:error, err, %{buffer: buffer} = s} <- recv_error_ready(s, status, err, buffer),
+         {:ok, _, s} <- recv_until_transaction(s, status, buffer) do
       {:error, err, s}
     else
       {:disconnect, _err, _s} = disconnect ->
