@@ -1721,8 +1721,12 @@ defmodule Postgrex.Protocol do
     case recv_transaction(s, status, buffer) do
       {:ok, _, %{postgres: :transaction}} = ok ->
         ok
+
       {:ok, _, %{buffer: buffer} = s} ->
         recv_until_transaction(s, status, buffer)
+
+      e ->
+        e
     end
   end
 
